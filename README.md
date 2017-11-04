@@ -11,7 +11,7 @@ Le funzioni su cui lavorare sono dunque 'mulliganFilter' e 'evaluateGame'. In en
 calcolo del mana accessibile e non ha strategie nei turni conseguenti al 1° (gioca solo Gitaxian Probe e Street Wraith se può), nel caso si voglia implementare
 un mazzo con Combo più complesse (che si estendono su più turni o usano effetti tipo Ponder) allora la 'evaluateGame' sarà necessariamente più complicata.
 
-TODO:
+TODO :
 - Implementare un piccolo simulatore interno che cerchi di giocare ogni carta che ha in mano (con strategie di vittoria)
 
 

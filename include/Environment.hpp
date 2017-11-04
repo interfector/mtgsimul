@@ -66,7 +66,6 @@ class Environment
 		std::map<std::string, int> result;
 
 		std::vector<std::string> priorityList;
-		std::array<std::vector<MTGTrigger*>, PLAYER_TRIGGER> trigger;
 
 		int mulliganCount;
 
@@ -153,6 +152,26 @@ class Environment
 				zone[LIBRARY].pop_back();
 				zone[HAND].back()->currentZone = HAND;
 			}
+		}
+
+		virtual void showZone(ZoneType sZone, std::string msg) {
+			std::cout << "\n===== " + msg + " ======\n";
+			for (auto &card : zone[sZone])
+					std::cout << "-> " << card->name << "\n";
+			std::cout << "===================\n";
+		}
+
+		virtual Environment* clone() {
+			Environment* nEnv = new Environment();
+
+			nEnv->manapool = manapool;
+			nEnv->counter = counter;
+			nEnv->result = result;
+
+			for(int i = 0;i < ZONE_COUNT;i++)
+				nEnv->zone[i] = zone[i];
+
+			return nEnv;
 		}
 
 		virtual bool mulliganFilter() { return false; }

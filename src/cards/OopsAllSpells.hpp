@@ -1,146 +1,183 @@
-std::map<std::string, unsigned int>
-countPossibleMana(Environment* env)
+std::vector<std::string>
+split(const char *phrase, std::string delimiter)
 {
-	std::map<std::string, unsigned int> manapool;
-	bool onExile[8] = { false, false, false, false, false, false, false, false };
-
-	manapool["R"] = 0;
-	manapool["W"] = 0;
-	manapool["U"] = 0;
-	manapool["G"] = 0;
-	manapool["B"] = 0;
-	manapool["C"] = 0;
-	manapool["ANY"] = 0;
-	manapool["MOX"] = 0;
-	manapool["TOTAL"] = 0;
-
-	manapool["R"] += env->countInZone("Simian Spirit Guide", HAND);
-	manapool["G"] += env->countInZone("Elvish Spirit Guide", HAND);
-	manapool["G"] += (env->countInZone("Summoner's Pact", HAND) > 1) ? env->countInZone("Summoner's Pact", HAND) - 1 : 0;
-	manapool["ANY"] += env->countInZone("Lotus Petal", HAND);
-
-	int moxCount = env->countInZone("Chrome Mox", HAND);
-	for(int k = 0;k < moxCount;k++) {
-		if( (env->countInZone("Balustrade Spy", HAND) + env->countInZone("Undercity Informer", HAND) >= 2 && 
-					!onExile[0] && !onExile[1])
-				|| (env->isInZone("Cabal Therapy", HAND) && !onExile[2]) 
-				|| (env->isInZone("Bridge from Below", HAND) && !onExile[6])
-				|| (env->isInZone("Street Wraith", HAND) && !onExile[7])) {
-			if( env->isInZone("Bridge from Below", HAND) && !onExile[6] )
-				onExile[6] = true;
-			else if( env->isInZone("Cabal Therapy", HAND) && !onExile[2] )
-				onExile[2] = true;
-			else if( env->isInZone("Street Wraith", HAND) && !onExile[7] ) {
-				onExile[7] = true;
-				manapool["MOX_STREETWRAITH"] = 1;
-			}
-			else if (env->isInZone("Undercity Informer", HAND) && !onExile[1] )
-				onExile[1] = true;
-			else if (env->isInZone("Balustrade Spy", HAND) && !onExile[0] )
-				onExile[0] = true;
-
-			manapool["B"]++;
-			manapool["MOX"] = 1;
-		}
-		else if ( env->countInZone("Chancellor of the Annex", HAND) >= 1 && !onExile[3]) {
-			onExile[3] = true;
-			manapool["W"]++;
-			manapool["MOX"] = 1;
-		}
-		else if ( env->countInZone("Narcomoeba", HAND) >= 1 && !onExile[4]) {
-			onExile[4] = true;
-			manapool["U"]++;
-			manapool["MOX"] = 1;
-		}
-		else if ( env->countInZone("Manamorphose", HAND) >= 1 && !onExile[5]) {
-			manapool["R"]++;
-			onExile[5] = true;
-			manapool["MOX"] = 1;
-		}
+	std::vector<std::string> list;
+	std::string s = std::string(phrase);
+	size_t pos = 0;
+	std::string token;
+	while ((pos = s.find(delimiter)) != std::string::npos)
+	{
+		token = s.substr(0, pos);
+		list.push_back(token);
+		s.erase(0, pos + delimiter.length());
 	}
 
-	if( env->isInZone("Summoner's Pact", HAND) ) {
-		if( manapool["ANY"] <= 0 && manapool["B"] <= 0 && (manapool["G"] > 0 || manapool["R"] > 0))
-			env->getFromZone(LIBRARY, HAND, env->searchZone("Wild Cantor", LIBRARY));
-		else	
-			manapool["G"]++;
-	}
-
-	if( env->isInZone("Wild Cantor", HAND) || 
-			((env->isInZone("Manamorphose", HAND) && 
-			  !onExile[5] && 
-			  (manapool["G"] + manapool["R"] + manapool["ANY"]) >= 2) && (manapool["ANY"] + manapool["B"]) <= 1)) {
-		if( manapool["ANY"] <= 0 && manapool["B"] <= 0 ) {
-			if( manapool["R"] > 0 ) {
-				manapool["R"]--;
-				manapool["B"]++;
-			} else if( env->manapool["G"] > 0 ) {
-				manapool["G"]--;
-				manapool["B"]++;
-			}
-		}
-	}
-
-	if( manapool["ANY"] > 0 || manapool["B"] > 0 ) {
-		int c1 = env->countInZone("Dark Ritual", HAND);
-		int c2 = env->countInZone("Cabal Ritual", HAND);
-
-		if( env->isInZone("Dark Ritual", HAND) ) {
-			if( manapool["B"] <= 0 ) {
-				manapool["B"] += 2 * c1 + 1;
-				manapool["ANY"]--;
-			} else
-				manapool["B"] += 2 * c1;
-		}
-
-
-		if( env->isInZone("Cabal Ritual", HAND) ) {
-			if( manapool["ANY"] > 0 || manapool["R"] > 0 || manapool["G"] > 0 || manapool["B"] >= 2) {
-				if (manapool["B"] >= 2 ) {
-					manapool["B"] += c2;
-				} else {
-					if( manapool["R"] > 0 )
-						manapool["R"]--;
-					else if (env->manapool["G"] > 0 )
-						manapool["G"]--;
-					else
-						manapool["ANY"]--;
-
-					manapool["B"] += c2 + 1;
-				}
-			}
-		}
-	}
-
-	manapool["TOTAL"] = manapool["R"] + manapool["G"] + manapool["B"] + manapool["U"] + manapool["W"] + manapool["ANY"];
-
-	return manapool;
+	list.push_back(s);
+	
+	return list;
 }
 
-bool victoryFilter(Environment* env)
+Environment*
+countPossibleMana(Environment* env)
 {
-	if(env->totalMana() >= 4 && env->manapool["B"] >= 1)
-	{
-		if( (env->isInZone("Balustrade Spy", HAND) || env->isInZone("Undercity Informer", HAND)) && env->countInZone("Narcomoeba", LIBRARY) >= 3)
-			return true;
-	} else if (env->totalMana() >= 1 && env->isInZone("Undercity Informer", BATTLEFIELD)) {
-		return true;
+	Environment* sbox = env->clone();
+
+	sbox->manapool["R"] = 0;
+	sbox->manapool["W"] = 0;
+	sbox->manapool["U"] = 0;
+	sbox->manapool["G"] = 0;
+	sbox->manapool["B"] = 0;
+	sbox->manapool["C"] = 0;
+	sbox->manapool["ANY"] = 0;
+	sbox->manapool["TOTAL"] = 0;
+
+	while(sbox->countInZone("Simian Spirit Guide", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Simian Spirit Guide", HAND));
+		sbox->manapool["R"]++;
 	}
 
-	return false;
+	while(sbox->countInZone("Elvish Spirit Guide", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Elvish Spirit Guide", HAND));
+		sbox->manapool["G"]++;
+	}
+
+	if(sbox->countInZone("Summoner's Pact", HAND) > 1) {
+		while(sbox->countInZone("Elvish Spirit Guide", HAND) > 1) {
+			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Summoner's Pact", HAND));
+			sbox->manapool["G"]++;
+		}
+	}
+
+	while(sbox->countInZone("Lotus Petal", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Lotus Petal", HAND));
+		sbox->manapool["ANY"]++;
+	}
+
+	int moxCount = sbox->countInZone("Chrome Mox", HAND);
+	for(int k = 0;k < moxCount;k++) {
+		if( (sbox->countInZone("Balustrade Spy", HAND) + sbox->countInZone("Undercity Informer", HAND) >= 2)
+				|| sbox->isInZone("Cabal Therapy", HAND)
+				|| sbox->isInZone("Bridge from Below", HAND)
+				|| sbox->isInZone("Street Wraith", HAND)) {
+			if( sbox->isInZone("Bridge from Below", HAND) )
+				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Bridge from Below", HAND));
+			else if( sbox->isInZone("Cabal Therapy", HAND) )
+				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Cabal Therapy", HAND));
+			else if( sbox->isInZone("Street Wraith", HAND) )
+				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Street Wraith", HAND));
+			else if (sbox->isInZone("Undercity Informer", HAND) )
+				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Undercity Informer", HAND));
+			else if (sbox->isInZone("Balustrade Spy", HAND) )
+				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Balustrade Spy", HAND));
+
+			sbox->manapool["B"]++;
+			sbox->manapool["MOX"] = 1;
+		}
+		else if ( sbox->countInZone("Chancellor of the Annex", HAND) >= 1 ) {
+			sbox->manapool["W"]++;
+			sbox->manapool["MOX"] = 1;
+			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Chancellor of the Annex", HAND));
+		}
+		else if ( sbox->countInZone("Narcomoeba", HAND) >= 1 ) {
+			sbox->manapool["U"]++;
+			sbox->manapool["MOX"] = 1;
+			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Narcomoeba", HAND));
+		}
+		else if ( sbox->countInZone("Gitaxian Probe", HAND) >= 1 ) {
+			sbox->manapool["U"]++;
+			sbox->manapool["MOX"] = 1;
+			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Gitaxian Probe", HAND));
+		}
+		else if ( sbox->countInZone("Manamorphose", HAND) >= 1) {
+			sbox->manapool["R"]++;
+			sbox->manapool["MOX"] = 1;
+			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Manamorphose", HAND));
+		} 
+		else if ( sbox->countInZone("Wild Cantor", HAND) >= 1 && sbox->manapool["ANY"] > 0) {
+			sbox->manapool["R"]++;
+			sbox->manapool["MOX"] = 1;
+			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Wild Cantor", HAND));
+		} 
+	}
+
+	if( sbox->isInZone("Summoner's Pact", HAND) ) {
+		if( sbox->manapool["ANY"] <= 0 && sbox->manapool["B"] <= 0 && (sbox->manapool["G"] > 0 || sbox->manapool["R"] > 0))
+			sbox->getFromZone(LIBRARY, HAND, sbox->searchZone("Wild Cantor", LIBRARY));
+		else	
+			sbox->manapool["G"]++;
+
+		sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Summoner's Pact", HAND));
+	}
+
+	if( sbox->isInZone("Wild Cantor", HAND) ) {
+		if( sbox->manapool["ANY"] <= 0 && sbox->manapool["B"] <= 0 ) {
+			if( sbox->manapool["R"] > 0 ) {
+				sbox->manapool["R"]--;
+				sbox->manapool["B"]++;
+			} else if( sbox->manapool["G"] > 0 ) {
+				sbox->manapool["G"]--;
+				sbox->manapool["B"]++;
+			}
+		}
+	}
+
+	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
+
+	if(sbox->manapool["TOTAL"] >= 2 && (sbox->manapool["R"] > 0 || sbox->manapool["G"] > 0)) {
+		while(sbox->countInZone("Manamorphose", HAND) > 0) {
+			if(sbox->manapool["B"] <= 0 && sbox->manapool["ANY"] <= 0) {
+				if( sbox->manapool["R"] > 0 )
+					sbox->manapool["R"]--;
+				else if ( sbox->manapool["G"] > 0 )
+					sbox->manapool["G"]--;
+
+				sbox->manapool["B"]++;
+			}
+
+			sbox->drawCard(1);
+
+			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Manamorphose", HAND));
+		}
+	}
+
+	if( sbox->manapool["ANY"] > 0 || sbox->manapool["B"] > 0) {
+		while(sbox->countInZone("Dark Ritual", HAND) > 0) {
+			if(sbox->manapool["B"] <= 0)
+				sbox->manapool["ANY"]--;
+			else
+				sbox->manapool["B"]--;
+
+			sbox->manapool["B"] += 3;
+			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Dark Ritual", HAND));
+		}
+
+		sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
+
+		while(sbox->countInZone("Cabal Ritual", HAND) > 0) {
+			if((sbox->manapool["B"] > 0 || sbox->manapool["ANY"] > 0) && (sbox->manapool["TOTAL"] >= 2) )
+				sbox->manapool["B"] += 1;
+
+			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Cabal Ritual", HAND));
+		}
+	}
+
+	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
+
+	return sbox;
 }
 
 std::vector<std::pair<MTGCard*,int>> libraryQuantity = {
-	std::pair<MTGCard*,int>(new MTGCard("Street Wraith", "3BB", 5), /* 1 */ 8),
-	std::pair<MTGCard*,int>(new MTGCard("Pact of Negation", "0", 0), /* 3 */ 0),
+	std::pair<MTGCard*,int>(new MTGCard("Street Wraith", "3BB", 5), /* 1 */ 4),
+//	std::pair<MTGCard*,int>(new MTGCard("Gitaxian Probe", "U", 1), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Pact of Negation", "0", 0), /* 3 */ 2),
 	std::pair<MTGCard*,int>(new MTGCard("Lotus Petal", "0", 0), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Simian Spirit Guide", "2R", 3), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Elvish Spirit Guide", "2G", 3), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Dark Ritual", "B", 1), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Cabal Ritual", "1B", 2), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Summoner's Pact", "0", 0), 4),
-	std::pair<MTGCard*,int>(new MTGCard("Manamorphose", "1R", 2), 0),
-	std::pair<MTGCard*,int>(new MTGCard("Chancellor of the Annex", "4WWW", 7), /* 4 */ 4),	
+	std::pair<MTGCard*,int>(new MTGCard("Manamorphose", "1R", 2), /* 0 */ 4),
+	std::pair<MTGCard*,int>(new MTGCard("Chancellor of the Annex", "4WWW", 7), /* 4 */ 2),	
 	std::pair<MTGCard*,int>(new MTGCard("Balustrade Spy", "3B", 4), 4),	
 	std::pair<MTGCard*,int>(new MTGCard("Wild Cantor", "R", 1), 1),
 	std::pair<MTGCard*,int>(new MTGCard("Undercity Informer", "2B", 3) , 4),	
@@ -159,20 +196,6 @@ class DeckEnvironment : public Environment
 		DeckEnvironment() : Environment() {
 			int check = 0;
 			mulliganCount = 3;
-
-			priorityList.push_back("Pact Of Negation");
-			priorityList.push_back("Chancellor of the Annex");
-			priorityList.push_back("Street Wraith");
-			priorityList.push_back("Gitaxian Probe");
-			priorityList.push_back("Lotus Petal");
-			priorityList.push_back("Simian Spirit Guide");
-			priorityList.push_back("Elvish Spirit Guide");
-			priorityList.push_back("Summoner's Pact");
-			priorityList.push_back("Wild Cantor");
-			priorityList.push_back("Dark Ritual");
-			priorityList.push_back("Cabal Ritual");
-			priorityList.push_back("Balustrade Spy");
-			priorityList.push_back("Undercity Informer");
 
 			for (auto &cardq : libraryQuantity) // access by reference to avoid copying
 			{
@@ -212,7 +235,7 @@ class DeckEnvironment : public Environment
 				return true;
 
 
-			if( countPossibleMana( this )["TOTAL"] < 3 )
+			if( countPossibleMana( this )->manapool["TOTAL"] < 3 )
 				return true;
 		
 			return false;
@@ -226,7 +249,7 @@ class DeckEnvironment : public Environment
 			if( countInZone("Undercity Informer", HAND) + countInZone("Balustrade Spy", HAND) <= 0 )
 				return false;
 
-			pool = countPossibleMana( this );
+			pool = countPossibleMana( this )->manapool;
 			count = pool["TOTAL"];
 
 			if( count == 3 && isInZone("Undercity Informer", HAND) && pool["MOX"] == 1 ) {
@@ -246,7 +269,13 @@ class DeckEnvironment : public Environment
 				counter["LIFE"] -= 2;
 			}
 
-			pool = countPossibleMana( this );
+			while(countInZone("Gitaxian Probe", HAND) > 0) {
+				getFromZone(HAND, GRAVEYARD, searchZone("Gitaxian Probe", HAND));
+				drawCard(1);
+				counter["LIFE"] -= 2;
+			}
+
+			pool = countPossibleMana( this )->manapool;
 			count = pool["TOTAL"];
 
 			if( count == 3 && isInZone("Undercity Informer", HAND) && pool["MOX"] == 1 ) {
@@ -267,15 +296,21 @@ class DeckEnvironment : public Environment
 			while(count < 4 || pool["B"] < 1) {
 				counter["TURN"]++;
 
-				drawCard(1);
-
 				while(countInZone("Street Wraith", HAND) > 0) {
 					getFromZone(HAND, GRAVEYARD, searchZone("Street Wraith", HAND));
 					drawCard(1);
 					counter["LIFE"] -= 2;
 				}
 
-				pool = countPossibleMana( this );
+				while(countInZone("Gitaxian Probe", HAND) > 0) {
+					getFromZone(HAND, GRAVEYARD, searchZone("Gitaxian Probe", HAND));
+					drawCard(1);
+					counter["LIFE"] -= 2;
+				}
+
+				drawCard(1);
+
+				pool = countPossibleMana( this )->manapool;
 				count = pool["TOTAL"];
 			}
 
@@ -317,21 +352,31 @@ initializeResult()
 
 	result["SHOW_RESULT"] = 0;
 
+	result["LAST_CHOSEN"] = 0;
+
 	for(int i = 2;i < arguments_count;i++) {
-		if(!strncmp(arguments[i], "--sample-t", 10))
-			result["SAMPLE"] = strtol(arguments[i]+10, NULL, 10);
+		if(!strncmp(arguments[i], "--sample", 10))
+			result["SAMPLE"] = 1;
 
-		if(!strncmp(arguments[i], "--turn=", 7))
+		if(!strncmp(arguments[i], "--turn=", 7)) {
 			result["TRY_TURN"] = strtol(arguments[i]+7, NULL, 10);
+			result["LAST_CHOSEN"] = 0;
+		}
 
-		if(!strncmp(arguments[i], "--hand-size=", 12))
+		if(!strncmp(arguments[i], "--hand-size=", 12)) {
 			result["HAND_SIZE"] = strtol(arguments[i]+12, NULL, 10);
+			result["LAST_CHOSEN"] = 1;
+		}
 
-		if(!strncmp(arguments[i], "--total-mana=", 13))
+		if(!strncmp(arguments[i], "--total-mana=", 13)) {
 			result["MANA_REQUEST"] = strtol(arguments[i]+13, NULL, 10);
+			result["LAST_CHOSEN"] = 2;
+		}
 
-		if(!strncmp(arguments[i], "--has-card=", 11))
+		if(!strncmp(arguments[i], "--has-card=", 11)) {
 			result["CATCH_CARD"] = i;
+			result["LAST_CHOSEN"] = 3;
+		}
 
 		if(!strcmp(arguments[i], "--show-result"))
 			result["SHOW_RESULT"] = 1;
@@ -351,7 +396,6 @@ initializeResult()
 				}
 				result["BOUND_VAR"] = result["BOUND_VAR"] * 10 + k;
 			}
-			//result["BOUND_VAR"] = strtol(arguments[i]+12, NULL, 10);
 		}
 	}
 }
@@ -360,19 +404,7 @@ void
 parseResult(Environment* env)
 {
 	bool bound[4] = { false, false, false, false };
-
-	if( env->counter["TURN"] == (unsigned)result["SAMPLE"] ) {
-		if(!result["HAND_SIZE"] || env->zone[HAND].size() == (unsigned)result["HAND_SIZE"]) {
-			if(!result["MANA_REQUEST"] || env->manapool["TOTAL"] == (unsigned)result["MANA_REQUEST"]) {
-				if(!result["CATCH_CARD"] || env->isInZone(arguments[result["CATCH_CARD"]]+11, HAND)) {
-					std::cout << "\t== SAMPLE HAND ==\n";
-					for (auto &card : env->zone[HAND])
-						std::cout << "-> " << card->name << "\n";
-					std::cout << "===================\n";
-				}
-			}
-		}
-	}
+	bool cardc = true;
 
 	if( result["BOUND"] ) {
 		bound[0] = bound[1] = bound[2] = bound[3] = true;
@@ -384,25 +416,51 @@ parseResult(Environment* env)
 			case 0:
 			if( result["TRY_TURN"] && env->counter["TURN"] == (unsigned)result["TRY_TURN"] && (bound[last] || !j)) {
 				result["TURN_COUNT"]++;
+				if( result["SAMPLE"] == 1 && result["LAST_CHOSEN"] == 0)
+					env->showZone(HAND, "\e[0;36mTurn\e[0m");
 				bound[seq % 10] = true;
 			}
 			break;
 			case 1:
 			if( result["HAND_SIZE"] && env->zone[HAND].size() == (unsigned)result["HAND_SIZE"] && (bound[last] || !j)) {
 				result["HAND_COUNT"]++;
+				if( result["SAMPLE"] == 1 && result["LAST_CHOSEN"] == 1)
+					env->showZone(HAND, "\e[0;31mHand Count\e[0m");
 				bound[seq % 10] = true;
 			}
 			break;
 			case 2:
 			if( result["MANA_REQUEST"] && env->manapool["TOTAL"] == (unsigned)result["MANA_REQUEST"] && (bound[last] || !j)) {
 				result["MANA_REQ_COUNT"]++;
+				if( result["SAMPLE"] == 1 && result["LAST_CHOSEN"] == 2)
+					env->showZone(HAND, "\e[0;32mMana Pool\e[0m");
 				bound[seq % 10] = true;
 			}
 			break;
 			case 3:
-			if( result["CATCH_CARD"] && env->isInZone(arguments[result["CATCH_CARD"]]+11, HAND) && (bound[last] || !j)) {
-				result["CATCHC_COUNT"]++;
-				bound[seq % 10] = true;
+			if( result["CATCH_CARD"] && (bound[last] || !j)) {
+				std::vector<std::string> tokens1 = split( arguments[result["CATCH_CARD"]]+11, "," );
+
+				for(unsigned int i = 0;i < tokens1.size() && cardc;i++) {
+					bool cardc2 = false;
+
+					if(tokens1[i].find('|') != std::string::npos) {
+						std::vector<std::string> tokens2 = split( tokens1[i].c_str(), "|" );
+						for(unsigned int j = 0;j < tokens2.size() && !cardc2;j++) {
+							cardc2 = cardc2 || env->isInZone(tokens2[i], HAND);
+						}
+					} else
+						cardc2 = env->isInZone(tokens1[i], HAND);
+
+					cardc = cardc && cardc2;
+				}
+
+				if( cardc ) {
+					result["CATCHC_COUNT"]++;
+					if( result["SAMPLE"] == 1 && result["LAST_CHOSEN"] == 3)
+						env->showZone(HAND, "\e[0;33mWITH CARDS\e[0m");
+					bound[seq % 10] = true;
+				}
 			}
 			break;
 		}
@@ -410,26 +468,7 @@ parseResult(Environment* env)
 		last = seq % 10;
 		seq /= 10;
 	}
-	/*
-	if( result["TRY_TURN"] && env->counter["TURN"] == (unsigned)result["TRY_TURN"] ) {
-		result["TURN_COUNT"]++;
-		bound[0] = true;
-	}
-	
-	if( result["HAND_SIZE"] && env->zone[HAND].size() == (unsigned)result["HAND_SIZE"] && bound[0]) {
-		result["HAND_COUNT"]++;
-		bound[1] = true;
-	}
 
-	if( result["MANA_REQUEST"] && env->manapool["TOTAL"] == (unsigned)result["MANA_REQUEST"] && bound[1]) {
-		result["MANA_REQ_COUNT"]++;
-		bound[2] = true;
-	}
-
-	if( result["CATCH_CARD"] && env->isInZone(arguments[result["CATCH_CARD"]]+11, HAND) && bound[2]) {
-			result["CATCHC_COUNT"]++;
-	}
-*/
 	if( env->counter["TURN"] <= 5 )
 	{
 		result["TURN" + std::to_string( env->counter["TURN"] )]++;
@@ -499,6 +538,7 @@ printResult2(Environment* env)
 void
 printResult(Environment* env)
 {
+	std::cout << "========= OOPS ALL SPELLS!! ==========\n";
 	if(result["SHOW_RESULT"] == 0)
 		printResult1( env );
 	else
