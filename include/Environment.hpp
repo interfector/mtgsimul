@@ -154,6 +154,11 @@ class Environment
 			}
 		}
 
+		virtual void putBottom() {
+			zone[LIBRARY].insert(zone[LIBRARY].begin(), zone[LIBRARY].back());
+			zone[LIBRARY].pop_back();
+		}
+
 		virtual void showZone(ZoneType sZone, std::string msg) {
 			std::cout << "\n===== " + msg + " ======\n";
 			for (auto &card : zone[sZone])
