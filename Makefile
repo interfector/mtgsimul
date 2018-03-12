@@ -16,6 +16,8 @@ all:
 
 clean:
 	rm -f $(BIN)
+	rm -rf src/*.swp src/cards/*.swp include/*.swp
+
 
 install: all
 	cp -f $(BIN) /usr/local/bin/
