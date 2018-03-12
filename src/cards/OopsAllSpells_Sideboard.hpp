@@ -152,7 +152,7 @@ countPossibleMana(Environment* env)
 	}
 
 	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
-
+/*
 	if(sbox->isInZone("Lion's Eye Diamond", HAND) && sbox->manapool["TOTAL"] >= 4) {
 		sbox->manapool["B"] += 3 * sbox->countInZone("Lion's Eye Diamond", HAND);
 
@@ -160,7 +160,7 @@ countPossibleMana(Environment* env)
 			sbox->getFromZone(HAND, GRAVEYARD, i);
 		}
 	}
-
+*/
 	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
 
 	return sbox;
@@ -216,8 +216,11 @@ class DeckEnvironment : public Environment
 		{
 			if( countInZone("Goblin Charbelcher", HAND) >= 3)
 				return true;
+
+			if( countInZone("Goblin Charbelcher", HAND) + countInZone("Spoils of the Vault", HAND) <= 0 )
+				return true;
 		
-			if( countPossibleMana( this )->manapool["TOTAL"] < 3 )
+			if( countPossibleMana( this )->manapool["TOTAL"] < 5 )
 				return true;
 		
 			return false;

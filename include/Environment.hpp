@@ -68,6 +68,7 @@ class Environment
 		std::vector<std::string> priorityList;
 
 		int mulliganCount;
+		Environment* old;
 
 //		std::map<std::string, MTGCard*> classMap;
 
