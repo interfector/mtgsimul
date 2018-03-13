@@ -5,8 +5,7 @@
 #include <map>
 #include <cassert>
 #include <Environment.hpp>
-//#include "OopsAllSpells_Sideboard.hpp"
-#include "OopsAllSpells.hpp"
+#include "TestDeck.hpp"
 //#include "Charbelcher.hpp"
 
 char** arguments;

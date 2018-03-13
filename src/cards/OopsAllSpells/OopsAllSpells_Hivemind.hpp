@@ -58,6 +58,11 @@ countPotentialMana(Environment* env)
 		count++;
 	}
 
+	while(sbox->countInZone("Spoils of the Vault", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Spoils of the Vault", HAND));
+		count++;
+	}
+
 	return count;
 }
 
@@ -93,15 +98,16 @@ countPossibleMana(Environment* env)
 		}
 	}
 
-	while(sbox->countInZone("Tinder Wall", HAND) > 0 && sbox->manapool["G"] > 0) {
-		sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Tinder Wall", HAND));
-		sbox->manapool["R"] += 2;
-		sbox->manapool["G"]--;
+	while(sbox->countInZone("Lotus Petal", HAND) > 0) {
+		sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Lotus Petal", HAND));
+		sbox->manapool["ANY"]++;
 	}
 
-	while(sbox->countInZone("Lotus Petal", HAND) > 0) {
-		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Lotus Petal", HAND));
-		sbox->manapool["ANY"]++;
+	unsigned int vein_count = 0;
+	while(sbox->isInZone("Crystal Vein", HAND) && vein_count < sbox->counter["TURN"]) {
+		sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Crystal Vein", HAND));
+		sbox->manapool["C"] += 2;
+		vein_count++;
 	}
 
 	int moxCount = sbox->countInZone("Chrome Mox", HAND);
@@ -116,34 +122,20 @@ countPossibleMana(Environment* env)
 				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Cabal Therapy", HAND));
 			else if( sbox->isInZone("Street Wraith", HAND) )
 				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Street Wraith", HAND));
-			else if (sbox->isInZone("Undercity Informer", HAND) )
-				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Undercity Informer", HAND));
-			else if (sbox->isInZone("Balustrade Spy", HAND) )
-				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Balustrade Spy", HAND));
 
 			sbox->manapool["B"]++;
 			sbox->manapool["MOX"] = 1;
-		}
-		else if ( sbox->countInZone("Chancellor of the Annex", HAND) >= 1 ) {
-			sbox->manapool["W"]++;
-			sbox->manapool["MOX"] = 1;
-			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Chancellor of the Annex", HAND));
-		}
-		else if ( sbox->countInZone("Narcomoeba", HAND) >= 1 ) {
-			sbox->manapool["U"]++;
-			sbox->manapool["MOX"] = 1;
-			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Narcomoeba", HAND));
 		}
 		else if ( sbox->countInZone("Gitaxian Probe", HAND) >= 1 ) {
 			sbox->manapool["U"]++;
 			sbox->manapool["MOX"] = 1;
 			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Gitaxian Probe", HAND));
-		}
-		else if ( sbox->countInZone("Manamorphose", HAND) >= 1) {
-			sbox->manapool["R"]++;
-			sbox->manapool["MOX"] = 1;
-			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Manamorphose", HAND));
 		} 
+		else if ( sbox->countInZone("Hive Mind", HAND) > 1 ) {
+			sbox->manapool["U"]++;
+			sbox->manapool["MOX"] = 1;
+			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Hive Mind", HAND));
+		}
 	}
 
 	if( sbox->isInZone("Summoner's Pact", HAND) ) {
@@ -168,12 +160,21 @@ countPossibleMana(Environment* env)
 				sbox->manapool["G"]--;
 				sbox->manapool["B"]++;
 			}
+		} else if (sbox->manapool["ANY"] <= 0 && sbox->manapool["U"] <= 0) {
+			if( sbox->manapool["R"] > 0 ) {
+				sbox->manapool["R"]--;
+				sbox->manapool["U"]++;
+			} else if( sbox->manapool["G"] > 0 ) {
+				sbox->manapool["G"]--;
+				sbox->manapool["U"]++;
+			}
 		}
+
 	}
 
 	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"] + sbox->manapool["C"];
 
-	if(sbox->manapool["TOTAL"] >= 2 && (sbox->manapool["R"] > 0 || sbox->manapool["G"] > 0)) {
+	if((sbox->manapool["TOTAL"] >= 2 && (sbox->manapool["R"] > 0 || sbox->manapool["G"] > 0)) && sbox->zone[LIBRARY].size() > 0) {
 		while(sbox->countInZone("Manamorphose", HAND) > 0) {
 			if(sbox->manapool["B"] <= 0 && sbox->manapool["ANY"] <= 0) {
 				if( sbox->manapool["R"] > 0 )
@@ -181,10 +182,15 @@ countPossibleMana(Environment* env)
 				else if ( sbox->manapool["G"] > 0 )
 					sbox->manapool["G"]--;
 
-				sbox->manapool["B"]++;
+				if(sbox->countInZone("Dark Ritual", HAND) + sbox->countInZone("Cabal Ritual", HAND) > 0)
+					sbox->manapool["B"]++;
+				else
+					sbox->manapool["U"]++;
+
 			}
 
-			sbox->drawCard(1);
+			if(sbox->zone[LIBRARY].size() > 0)
+				sbox->drawCard(1);
 
 			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Manamorphose", HAND));
 		}
@@ -204,34 +210,14 @@ countPossibleMana(Environment* env)
 		sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"] + sbox->manapool["C"];;
 
 		while(sbox->countInZone("Cabal Ritual", HAND) > 0) {
-			if((sbox->manapool["B"] > 0 || sbox->manapool["ANY"] > 0) && (sbox->manapool["TOTAL"] >= 2) )
-				sbox->manapool["B"] += 1;
-
-			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Cabal Ritual", HAND));
-		}
-	}
-
-	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"] + sbox->manapool["C"];
-
-	if(sbox->manapool["TOTAL"] > 2) {
-		while(sbox->countInZone("Grim Monolith", HAND) > 0) {
-			if(sbox->manapool["C"] > 1) {
-				sbox->manapool["C"]++;
-			} else if(sbox->manapool["G"] > 0 && sbox->manapool["R"] > 0) {
-				sbox->manapool["G"]--;
-				sbox->manapool["R"]--;
-				sbox->manapool["C"] += 3;
-			} else if(sbox->manapool["B"] > 1) {
-				if(sbox->manapool["G"] > 0)
-					sbox->manapool["G"]--;
-				else if (sbox->manapool["R"] > 0)
-					sbox->manapool["R"]--;
-
-				sbox->manapool["B"]--;
-				sbox->manapool["C"]+=3;
+			if((sbox->manapool["B"] > 0 || sbox->manapool["ANY"] > 0) && (sbox->manapool["TOTAL"] >= 2) ) {
+				if(sbox->zone[GRAVEYARD].size() >= 7 )
+					sbox->manapool["B"] += 3;
+				else
+					sbox->manapool["B"] += 1;
 			}
 
-			sbox->getFromZone(HAND, BATTLEFIELD, sbox->searchZone("Grim Monolith", HAND));
+			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Cabal Ritual", HAND));
 		}
 	}
 
@@ -241,31 +227,47 @@ countPossibleMana(Environment* env)
 }
 
 std::vector<std::pair<MTGCard*,int>> libraryQuantity = {
-	std::pair<MTGCard*,int>(new MTGCard("Street Wraith", "3BB", 5), /* 1 */ 4),
+	std::pair<MTGCard*,int>(new MTGCard("Street Wraith", "3BB", 5), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Gitaxian Probe", "U", 1), 4),
-//	std::pair<MTGCard*,int>(new MTGCard("Pact of Negation", "0", 0), /* 3 */ 2),
 	std::pair<MTGCard*,int>(new MTGCard("Lotus Petal", "0", 0), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Simian Spirit Guide", "2R", 3), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Elvish Spirit Guide", "2G", 3), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Dark Ritual", "B", 1), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Cabal Ritual", "1B", 2), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Summoner's Pact", "0", 0), 4),
-	std::pair<MTGCard*,int>(new MTGCard("Manamorphose", "1R", 2), /* 0 */ 4),
-//	std::pair<MTGCard*,int>(new MTGCard("Chancellor of the Annex", "4WWW", 7), /* 4 */ 1),	
-	std::pair<MTGCard*,int>(new MTGCard("Balustrade Spy", "3B", 4), 4),	
+	std::pair<MTGCard*,int>(new MTGCard("Manamorphose", "1R", 2), 4),
+//	std::pair<MTGCard*,int>(new MTGCard("Chancellor of the Annex", "4WWW", 7), 2),	
+	std::pair<MTGCard*,int>(new MTGCard("Pact of Negation", "0", 0), 4),	
 	std::pair<MTGCard*,int>(new MTGCard("Wild Cantor", "R", 1), 1),
-	std::pair<MTGCard*,int>(new MTGCard("Undercity Informer", "2B", 3) , 4),	
-	std::pair<MTGCard*,int>(new MTGCard("Narcomoeba", "1U", 2) , 4),	
+	std::pair<MTGCard*,int>(new MTGCard("Hive Mind", "5U", 6) , 4),	
+	std::pair<MTGCard*,int>(new MTGCard("Spoils of the Vault", "B", 1) , 4),
 	std::pair<MTGCard*,int>(new MTGCard("Chrome Mox", "0", 0) , 4),	
-	std::pair<MTGCard*,int>(new MTGCard("Laboratory Maniac", "2U", 3) , 1),	
-	std::pair<MTGCard*,int>(new MTGCard("Underworld Cerberus", "3BR", 5) , 1),	
-	std::pair<MTGCard*,int>(new MTGCard("Bridge from Below", "BBB", 3) , 1),	
-	std::pair<MTGCard*,int>(new MTGCard("Cabal Therapy", "B", 1) , 3),
-	std::pair<MTGCard*,int>(new MTGCard("Dread Return", "2BB", 4) , 1),
-//	std::pair<MTGCard*,int>(new MTGCard("Ingot Chewer", "4R", 5) , 1),
-//	std::pair<MTGCard*,int>(new MTGCard("Grim Monolith", "2", 2) , 1),
-//	std::pair<MTGCard*,int>(new MTGCard("Tinder Wall", "G", 1) , 1),
+	std::pair<MTGCard*,int>(new MTGCard("Crystal Vein", "0", 0) , 3),	
+	std::pair<MTGCard*,int>(new MTGCard("Pact of Titan", "0", 0) , 2),
+	std::pair<MTGCard*,int>(new MTGCard("Cabal Therapy", "B", 1) , 2),
 };
+/*
+std::vector<std::pair<MTGCard*,int>> libraryQuantity = {
+	std::pair<MTGCard*,int>(new MTGCard("Street Wraith", "3BB", 5), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Gitaxian Probe", "U", 1), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Pact of Negation", "0", 0), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Lotus Petal", "0", 0), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Simian Spirit Guide", "2R", 3), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Elvish Spirit Guide", "2G", 3), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Dark Ritual", "B", 1), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Cabal Ritual", "1B", 2), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Summoner's Pact", "0", 0), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Manamorphose", "1R", 2), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Wild Cantor", "R", 1), 1),
+	std::pair<MTGCard*,int>(new MTGCard("Chrome Mox", "0", 0) , 4),	
+	std::pair<MTGCard*,int>(new MTGCard("Cabal Therapy", "B", 1) , 2),
+	std::pair<MTGCard*,int>(new MTGCard("Pact of the Titan", "0", 0) , 2),
+	std::pair<MTGCard*,int>(new MTGCard("Hive Mind", "5U", 6) , 4),
+	std::pair<MTGCard*,int>(new MTGCard("Crystal Vein", "0", 0) , 3),
+	std::pair<MTGCard*,int>(new MTGCard("Spoils of the Vault", "B", 1) , 4),
+};
+*/
+
 
 class DeckEnvironment : public Environment 
 {
@@ -277,6 +279,11 @@ class DeckEnvironment : public Environment
 			for (auto &cardq : libraryQuantity) // access by reference to avoid copying
 			{
 				cardq.first->env = this;
+
+				if( cardq.second > 4 ) {
+					std::cout << "Error: Wrong number of card found!\n";
+					exit(2);
+				}
 
 				for(int i = 0;i < cardq.second;i++)
 					zone[LIBRARY].push_back(cardq.first->clone());
@@ -294,24 +301,10 @@ class DeckEnvironment : public Environment
 
 		bool mulliganFilter()
 		{
-			if( countInZone("Narcomoeba", HAND) + countInZone("Underworld Cerberus", HAND) + 
-			    countInZone("Dread Return", HAND) + countInZone("Laboratory Maniac", HAND) >= 3)
-				return true;
-		
-			if( countInZone("Undercity Informer", HAND) + countInZone("Balustrade Spy", HAND) <= 0 )
+			if( countInZone("Spoils of the Vault", HAND) + countInZone("Hive Mind", HAND) < 1 )
 				return true;
 
-			if( countInZone("Narcomoeba", HAND) == 2 ) {
-				if( countInZone("Bridge from Below", LIBRARY) >= 2 )
-					return false;
-				else if( !isInZone("Balustrade Spy", HAND) )
-					return true;
-			}
-
-			if( countInZone("Narcomoeba", HAND) > 2 )
-				return true;
-
-			if( countPossibleMana( this )->manapool["TOTAL"] < 2 && countPotentialMana( this ) < 3 )
+			if( countPossibleMana( this )->manapool["TOTAL"] < 2 && countPotentialMana( this ) < 4 )
 				return true;
 
 			return false;
@@ -329,38 +322,18 @@ class DeckEnvironment : public Environment
 
 				if(!card->name.compare("Narcomoeba"))
 					putBottom();
-				else if(!card->name.compare("Dread Return"))
-					putBottom();
-				else if(!card->name.compare("Bridge from Below"))
-					putBottom();
-				else if(!card->name.compare("Underworld Cerberus"))
-					putBottom();
-				else if(!card->name.compare("Laboratory Maniac"))
-					putBottom();
-				else if(!card->name.compare("Gitaxian Probe"))
-					putBottom();
-				else if(!card->name.compare("Manamorphose") && countPossibleMana( this )->manapool["B"] > 0)
-					putBottom();
 			}
 
-			if( countInZone("Undercity Informer", HAND) + countInZone("Balustrade Spy", HAND) <= 0 )
+			if( countInZone("Spoils of the Vault", HAND) + countInZone("Hive Mind", HAND) < 1 )
 				return false;
 
 			pool = countPossibleMana( this )->manapool;
 			count = pool["TOTAL"];
 
-			if( count == 3 && pool["B"] > 0 && isInZone("Undercity Informer", HAND) && pool["MOX"] == 1 ) {
+			if( count >= 6 && pool["U"] > 0 ) {
 				manapool = pool;
-
-				if( countInZone("Narcomoeba", LIBRARY) > 2 ) {
-					counter["TURN"]++;
+				if( countInZone("Pact of the Titan", HAND) + countInZone("Pact of Negation", HAND) > 0 )
 					return true;
-				}
-			}
-
-			if( count >= 4 && pool["B"] > 0 ) {
-				manapool = pool;
-				return true;
 			}
 
 			while(countInZone("Street Wraith", HAND) > 0) {
@@ -378,29 +351,17 @@ class DeckEnvironment : public Environment
 			pool = countPossibleMana( this )->manapool;
 			count = pool["TOTAL"];
 
-			if( count == 3 && pool["B"] > 0 && isInZone("Undercity Informer", HAND) && pool["MOX"] == 1 ) {
+			if( count >= 6 && pool["U"] > 0 ) {
 				manapool = pool;
-
-				if( countInZone("Narcomoeba", LIBRARY) > 2 ) {
-					counter["TURN"]++;
+				if( countInZone("Pact of the Titan", HAND) + countInZone("Pact of Negation", HAND) > 0 )
 					return true;
-				}
 			}
 
 		#ifdef _DEBUG
 			std::cout << "[DEBUG] Manacount: " << count << " Black mana: " << pool["B"] << "\n";
 		#endif
 
-			if( count >= 4 && pool["B"] > 0 ) {
-				manapool = pool;
-				if( isInZone("Balustrade Spy", HAND) )
-					return true;
-
-				if( countInZone("Narcomoeba", LIBRARY) > 2 )
-					return true;
-			}
-
-			while(count < 4 || pool["B"] < 1 || (!isInZone("Balustrade Spy", HAND) && countInZone("Narcomoeba", LIBRARY) < 2)) {
+			while((count < 6 || pool["U"] < 1) && zone[LIBRARY].size() > 0) {
 				counter["TURN"]++;
 
 				while(countInZone("Street Wraith", HAND) > 0) {
@@ -686,10 +647,10 @@ void
 banner(void)
 {
 	printf(
-		" _                  __           \n"
-		"/ \\ _ ._  _  /\\ || (_ ._  _ || _|\n"
-		"\\_/(_)|_)_> /--\\|| __)|_)(/_||_>o\n"
-		"      |               |          \n");
+		" _                  __                                    \n"
+		"/ \\ _ ._  _  /\\ || (_ ._  _ || _| __ |_|o   _ |\\/|o._  _| \n"
+		"\\_/(_)|_)_> /--\\|| __)|_)(/_||_>o    | ||\\/(/_|  ||| |(_| \n"
+		"      |               |                                   \n");
 }
 
 void

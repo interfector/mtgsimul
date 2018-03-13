@@ -17,6 +17,50 @@ split(const char *phrase, std::string delimiter)
 	return list;
 }
 
+int
+countPotentialMana(Environment* env)
+{
+	int count = 0;
+	Environment* sbox = env->clone();
+
+	while(sbox->countInZone("Simian Spirit Guide", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Simian Spirit Guide", HAND));
+		count++;
+	}
+
+	while(sbox->countInZone("Elvish Spirit Guide", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Elvish Spirit Guide", HAND));
+		count++;
+	}
+
+	while(sbox->countInZone("Summoner's Pact", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Summoner's Pact", HAND));
+		count++;
+	}
+
+	while(sbox->countInZone("Lotus Petal", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Lotus Petal", HAND));
+		count++;
+	}
+
+	while(sbox->countInZone("Dark Ritual", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Dark Ritual", HAND));
+		count+=2;
+	}
+
+	while(sbox->countInZone("Chrome Mox", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Chrome Mox", HAND));
+		count++;
+	}
+
+	while(sbox->countInZone("Cabal Ritual", HAND) > 0) {
+		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Cabal Ritual", HAND));
+		count++;
+	}
+
+	return count;
+}
+
 Environment*
 countPossibleMana(Environment* env)
 {
@@ -42,20 +86,28 @@ countPossibleMana(Environment* env)
 	}
 
 	if(sbox->countInZone("Summoner's Pact", HAND) > 1) {
-		while(sbox->countInZone("Elvish Spirit Guide", HAND) > 1) {
+		while(sbox->countInZone("Summoner's Pact", HAND) > 1 && sbox->countInZone("Elvish Spirit Guide", LIBRARY) > 0) {
+			sbox->getFromZone(LIBRARY, EXILE, sbox->searchZone("Elvish Spirit Guide", LIBRARY));
 			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Summoner's Pact", HAND));
 			sbox->manapool["G"]++;
 		}
 	}
 
+	while(sbox->countInZone("Tinder Wall", HAND) > 0 && sbox->manapool["G"] > 0) {
+		sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Tinder Wall", HAND));
+		sbox->manapool["R"] += 2;
+		sbox->manapool["G"]--;
+	}
+
 	while(sbox->countInZone("Lotus Petal", HAND) > 0) {
-		sbox->getFromZone(HAND, EXILE, sbox->searchZone("Lotus Petal", HAND));
+		sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Lotus Petal", HAND));
 		sbox->manapool["ANY"]++;
 	}
 
 	int moxCount = sbox->countInZone("Chrome Mox", HAND);
 	for(int k = 0;k < moxCount;k++) {
-		if(	sbox->isInZone("Cabal Therapy", HAND)
+		if( (sbox->countInZone("Balustrade Spy", HAND) + sbox->countInZone("Undercity Informer", HAND) >= 2)
+				|| sbox->isInZone("Cabal Therapy", HAND)
 				|| sbox->isInZone("Bridge from Below", HAND)
 				|| sbox->isInZone("Street Wraith", HAND)) {
 			if( sbox->isInZone("Bridge from Below", HAND) )
@@ -64,14 +116,23 @@ countPossibleMana(Environment* env)
 				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Cabal Therapy", HAND));
 			else if( sbox->isInZone("Street Wraith", HAND) )
 				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Street Wraith", HAND));
+			else if (sbox->isInZone("Undercity Informer", HAND) )
+				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Undercity Informer", HAND));
+			else if (sbox->isInZone("Balustrade Spy", HAND) )
+				sbox->getFromZone(HAND, EXILE, sbox->searchZone("Balustrade Spy", HAND));
 
 			sbox->manapool["B"]++;
 			sbox->manapool["MOX"] = 1;
 		}
-		else if ( sbox->countInZone("Ingot Chewer", HAND) >= 1 ) {
-			sbox->manapool["R"]++;
+		else if ( sbox->countInZone("Chancellor of the Annex", HAND) >= 1 ) {
+			sbox->manapool["W"]++;
 			sbox->manapool["MOX"] = 1;
-			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Ingot Chewer", HAND));
+			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Chancellor of the Annex", HAND));
+		}
+		else if ( sbox->countInZone("Narcomoeba", HAND) >= 1 ) {
+			sbox->manapool["U"]++;
+			sbox->manapool["MOX"] = 1;
+			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Narcomoeba", HAND));
 		}
 		else if ( sbox->countInZone("Gitaxian Probe", HAND) >= 1 ) {
 			sbox->manapool["U"]++;
@@ -83,18 +144,17 @@ countPossibleMana(Environment* env)
 			sbox->manapool["MOX"] = 1;
 			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Manamorphose", HAND));
 		} 
-		else if ( sbox->countInZone("Wild Cantor", HAND) >= 1 && sbox->manapool["ANY"] > 0) {
-			sbox->manapool["R"]++;
-			sbox->manapool["MOX"] = 1;
-			sbox->getFromZone(HAND, EXILE, sbox->searchZone("Wild Cantor", HAND));
-		} 
 	}
 
 	if( sbox->isInZone("Summoner's Pact", HAND) ) {
 		if( sbox->manapool["ANY"] <= 0 && sbox->manapool["B"] <= 0 && (sbox->manapool["G"] > 0 || sbox->manapool["R"] > 0))
 			sbox->getFromZone(LIBRARY, HAND, sbox->searchZone("Wild Cantor", LIBRARY));
-		else	
-			sbox->manapool["G"]++;
+		else	{
+			if( sbox->countInZone("Elvish Spirit Guide", LIBRARY) > 0 ) {
+				sbox->getFromZone(LIBRARY, EXILE, sbox->searchZone("Elvish Spirit Guide", LIBRARY));
+				sbox->manapool["G"]++;
+			}
+		}
 
 		sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Summoner's Pact", HAND));
 	}
@@ -111,7 +171,7 @@ countPossibleMana(Environment* env)
 		}
 	}
 
-	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
+	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"] + sbox->manapool["C"];
 
 	if(sbox->manapool["TOTAL"] >= 2 && (sbox->manapool["R"] > 0 || sbox->manapool["G"] > 0)) {
 		while(sbox->countInZone("Manamorphose", HAND) > 0) {
@@ -141,50 +201,74 @@ countPossibleMana(Environment* env)
 			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Dark Ritual", HAND));
 		}
 
-		sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
+		sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"] + sbox->manapool["C"];;
 
 		while(sbox->countInZone("Cabal Ritual", HAND) > 0) {
-			if((sbox->manapool["B"] > 0 || sbox->manapool["ANY"] > 0) && (sbox->manapool["TOTAL"] >= 2) )
-				sbox->manapool["B"] += 1;
+			if((sbox->manapool["B"] > 0 || sbox->manapool["ANY"] > 0) && (sbox->manapool["TOTAL"] >= 2) ) {
+				if( sbox->zone[GRAVEYARD].size() >= 7 )
+					sbox->manapool["B"] += 3;
+				else
+					sbox->manapool["B"] += 1;
+			}
 
 			sbox->getFromZone(HAND, GRAVEYARD, sbox->searchZone("Cabal Ritual", HAND));
 		}
 	}
 
-	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
-/*
-	if(sbox->isInZone("Lion's Eye Diamond", HAND) && sbox->manapool["TOTAL"] >= 4) {
-		sbox->manapool["B"] += 3 * sbox->countInZone("Lion's Eye Diamond", HAND);
+	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"] + sbox->manapool["C"];
 
-		for(int i = 0;i < sbox->zone[HAND].size();i++) {
-			sbox->getFromZone(HAND, GRAVEYARD, i);
+	if(sbox->manapool["TOTAL"] > 2) {
+		while(sbox->countInZone("Grim Monolith", HAND) > 0) {
+			if(sbox->manapool["C"] > 1) {
+				sbox->manapool["C"]++;
+			} else if(sbox->manapool["G"] > 0 && sbox->manapool["R"] > 0) {
+				sbox->manapool["G"]--;
+				sbox->manapool["R"]--;
+				sbox->manapool["C"] += 3;
+			} else if(sbox->manapool["B"] > 1) {
+				if(sbox->manapool["G"] > 0)
+					sbox->manapool["G"]--;
+				else if (sbox->manapool["R"] > 0)
+					sbox->manapool["R"]--;
+
+				sbox->manapool["B"]--;
+				sbox->manapool["C"]+=3;
+			}
+
+			sbox->getFromZone(HAND, BATTLEFIELD, sbox->searchZone("Grim Monolith", HAND));
 		}
 	}
-*/
-	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"];
+
+	sbox->manapool["TOTAL"] = sbox->manapool["R"] + sbox->manapool["G"] + sbox->manapool["B"] + sbox->manapool["U"] + sbox->manapool["W"] + sbox->manapool["ANY"] + sbox->manapool["C"];
 
 	return sbox;
 }
 
 std::vector<std::pair<MTGCard*,int>> libraryQuantity = {
-	std::pair<MTGCard*,int>(new MTGCard("Street Wraith", "3BB", 5), /* 1 */ 4),
+	std::pair<MTGCard*,int>(new MTGCard("Street Wraith", "3BB", 5), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Gitaxian Probe", "U", 1), 4),
+	std::pair<MTGCard*,int>(new MTGCard("Pact of Negation", "0", 0), /* 3 */ 2),
 	std::pair<MTGCard*,int>(new MTGCard("Lotus Petal", "0", 0), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Simian Spirit Guide", "2R", 3), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Elvish Spirit Guide", "2G", 3), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Dark Ritual", "B", 1), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Cabal Ritual", "1B", 2), 4),
 	std::pair<MTGCard*,int>(new MTGCard("Summoner's Pact", "0", 0), 4),
-	std::pair<MTGCard*,int>(new MTGCard("Manamorphose", "1R", 2), /* 0 */ 4),
+	std::pair<MTGCard*,int>(new MTGCard("Manamorphose", "1R", 2), 4),
+//	std::pair<MTGCard*,int>(new MTGCard("Chancellor of the Annex", "4WWW", 7), /* 4 */ 2),	
+	std::pair<MTGCard*,int>(new MTGCard("Balustrade Spy", "3B", 4), 4),	
 	std::pair<MTGCard*,int>(new MTGCard("Wild Cantor", "R", 1), 1),
+	std::pair<MTGCard*,int>(new MTGCard("Undercity Informer", "2B", 3) , 4),	
+	std::pair<MTGCard*,int>(new MTGCard("Narcomoeba", "1U", 2) , 4),
 	std::pair<MTGCard*,int>(new MTGCard("Chrome Mox", "0", 0) , 4),	
-	std::pair<MTGCard*,int>(new MTGCard("Bridge from Below", "BBB", 3) , 1),	
-	std::pair<MTGCard*,int>(new MTGCard("Cabal Therapy", "B", 1) , 3),	
-	std::pair<MTGCard*,int>(new MTGCard("Goblin Charbelcher", "4", 4) , 4),	
-	std::pair<MTGCard*,int>(new MTGCard("Lion's Eye Diamond", "0", 0) , 4),	
-	std::pair<MTGCard*,int>(new MTGCard("Spoils of the Vault", "B", 1) , 3),	
-	std::pair<MTGCard*,int>(new MTGCard("Pact of Negation", "0", 0) , 3),
-	std::pair<MTGCard*,int>(new MTGCard("Ingot Chewer", "R", 1) , 1),
+	std::pair<MTGCard*,int>(new MTGCard("Laboratory Maniac", "2U", 3) , 1),	
+	std::pair<MTGCard*,int>(new MTGCard("Underworld Cerberus", "3BR", 5) , 1),	
+//	std::pair<MTGCard*,int>(new MTGCard("Bridge from Below", "BBB", 3) , 1),	
+	std::pair<MTGCard*,int>(new MTGCard("Cabal Therapy", "B", 1) , /* 3 */2),
+	std::pair<MTGCard*,int>(new MTGCard("Dread Return", "2BB", 4) , 1),
+//	std::pair<MTGCard*,int>(new MTGCard("Ingot Chewer", "4R", 5) , 1),
+//	std::pair<MTGCard*,int>(new MTGCard("Grim Monolith", "2", 2) , 1),
+//	std::pair<MTGCard*,int>(new MTGCard("Tinder Wall", "G", 1) , 1),
 };
 
 class DeckEnvironment : public Environment 
@@ -214,15 +298,26 @@ class DeckEnvironment : public Environment
 
 		bool mulliganFilter()
 		{
-			if( countInZone("Goblin Charbelcher", HAND) >= 3)
+			if( countInZone("Narcomoeba", HAND) + countInZone("Underworld Cerberus", HAND) + 
+			    countInZone("Dread Return", HAND) + countInZone("Laboratory Maniac", HAND) >= 3)
+				return true;
+		
+			if( countInZone("Undercity Informer", HAND) + countInZone("Balustrade Spy", HAND) <= 0 )
 				return true;
 
-			if( countInZone("Goblin Charbelcher", HAND) + countInZone("Spoils of the Vault", HAND) <= 0 )
+			if( countInZone("Narcomoeba", HAND) == 2 ) {
+				if( countInZone("Bridge from Below", LIBRARY) >= 2 )
+					return false;
+				else if( !isInZone("Balustrade Spy", HAND) )
+					return true;
+			}
+
+			if( countInZone("Narcomoeba", HAND) > 2 )
 				return true;
-		
-			if( countPossibleMana( this )->manapool["TOTAL"] < 5 )
+
+			if( countPossibleMana( this )->manapool["TOTAL"] < 2 && countPotentialMana( this ) < 3 )
 				return true;
-		
+
 			return false;
 		}
 
@@ -231,26 +326,45 @@ class DeckEnvironment : public Environment
 			int count;
 			std::map<std::string, unsigned int> pool;
 
-			if( countInZone("Goblin Charbelcher", HAND) + countInZone("Spoils of the Vault", HAND) <= 0 )
+			this->old = this->clone();
+
+			if( counter["MULLIGAN"] > 0 ) {
+				MTGCard* card = zone[LIBRARY].back();
+
+				if(!card->name.compare("Narcomoeba"))
+					putBottom();
+				else if(!card->name.compare("Dread Return"))
+					putBottom();
+				else if(!card->name.compare("Bridge from Below"))
+					putBottom();
+				else if(!card->name.compare("Underworld Cerberus"))
+					putBottom();
+				else if(!card->name.compare("Laboratory Maniac"))
+					putBottom();
+				else if(!card->name.compare("Gitaxian Probe"))
+					putBottom();
+				else if(!card->name.compare("Manamorphose") && countPossibleMana( this )->manapool["B"] > 0)
+					putBottom();
+			}
+
+			if( countInZone("Undercity Informer", HAND) + countInZone("Balustrade Spy", HAND) <= 0 )
 				return false;
 
 			pool = countPossibleMana( this )->manapool;
 			count = pool["TOTAL"];
 
-			if( count >= 7 && isInZone("Goblin Charbelcher", HAND)) {
+			if( count == 3 && pool["B"] > 0 && isInZone("Undercity Informer", HAND) && pool["MOX"] == 1 ) {
 				manapool = pool;
-				return true;
+
+				if( countInZone("Narcomoeba", LIBRARY) > 2 ) {
+					counter["TURN"]++;
+					return true;
+				}
 			}
 
-			if( count >= 8 && pool["B"] > 0 && isInZone("Spoils of the Vault", HAND)) {
-				for(int i = 0;i < counter["LIFE"]-2;i++) {
-					if( !zone[LIBRARY].at(i)->name.compare("Goblin Charbelcher") ) {
-						manapool = pool;
-						return true;
-					}
-				}
-
-				return false;
+			if( count >= 4 && pool["B"] > 0 ) {
+				manapool = pool;
+				return true;
 			}
 
 			while(countInZone("Street Wraith", HAND) > 0) {
@@ -268,23 +382,29 @@ class DeckEnvironment : public Environment
 			pool = countPossibleMana( this )->manapool;
 			count = pool["TOTAL"];
 
-			if( count >= 7 && isInZone("Goblin Charbelcher", HAND)) {
+			if( count == 3 && pool["B"] > 0 && isInZone("Undercity Informer", HAND) && pool["MOX"] == 1 ) {
 				manapool = pool;
-				return true;
-			}
 
-			if( count >= 8 && pool["B"] > 0 && isInZone("Spoils of the Vault", HAND)) {
-				for(int i = 0;i < counter["LIFE"]-2;i++) {
-					if( !zone[LIBRARY].at(i)->name.compare("Goblin Charbelcher") ) {
-						manapool = pool;
-						return true;
-					}
+				if( countInZone("Narcomoeba", LIBRARY) > 2 ) {
+					counter["TURN"]++;
+					return true;
 				}
-
-				return false;
 			}
 
-			while(count < 7 || (count < 8 && pool["B"] < 1)) {
+		#ifdef _DEBUG
+			std::cout << "[DEBUG] Manacount: " << count << " Black mana: " << pool["B"] << "\n";
+		#endif
+
+			if( count >= 4 && pool["B"] > 0 ) {
+				manapool = pool;
+				if( isInZone("Balustrade Spy", HAND) )
+					return true;
+
+				if( countInZone("Narcomoeba", LIBRARY) > 2 )
+					return true;
+			}
+
+			while(count < 4 || pool["B"] < 1 || (!isInZone("Balustrade Spy", HAND) && countInZone("Narcomoeba", LIBRARY) < 2)) {
 				counter["TURN"]++;
 
 				while(countInZone("Street Wraith", HAND) > 0) {
@@ -346,14 +466,14 @@ initializeResult()
 	result["LAST_CHOSEN"] = 0;
 
 	if(!strncmp(arguments[1], "--help", 6)) {
-		std::cout << "Commands:" << std::endl;
+		std::cout << "\e[1;10mCommands:\e[0m" << std::endl;
 		std::cout << "\t[nothing] : Display some generic numerical information about the deck." << std::endl;
 		std::cout << "\t--help : Display this help" << std::endl;
 		std::cout << "\t--sample : Display sample hands respecting research parameters." << std::endl;
 		std::cout << "\t--show-result : Display numerical results respecting research parameters." << std::endl;
 		std::cout << "\t--unbound-var : Unbound the parameters." << std::endl;
 		std::cout << "\t--bound-var=[CMST] : Bound the parameters according to the string chosen (default CMST)." << std::endl;
-		std::cout << "Parameters:" << std::endl;
+		std::cout << "\e[1;10mParameters:\e[0m" << std::endl;
 		std::cout << "\t--turn : Set the win turn." << std::endl;
 		std::cout << "\t--hand-size : Set the length of the hand for winning." << std::endl;
 		std::cout << "\t--total-mana : Set the amount of mana needed." << std::endl;
@@ -407,21 +527,22 @@ initializeResult()
 		}
 
 		if(!strncmp(arguments[i], "--help", 6)) {
-			std::cout << "Commands:" << std::endl;
+			std::cout << "\e[1;10mCommands:\e[0m" << std::endl;
 			std::cout << "\t[nothing] : Display some generic numerical information about the deck." << std::endl;
 			std::cout << "\t--help : Display this help" << std::endl;
 			std::cout << "\t--sample : Display sample hands respecting research parameters." << std::endl;
 			std::cout << "\t--show-result : Display numerical results respecting research parameters." << std::endl;
 			std::cout << "\t--unbound-var : Unbound the parameters." << std::endl;
 			std::cout << "\t--bound-var=[CMST] : Bound the parameters according to the string chosen (default CMST)." << std::endl;
-			std::cout << "Parameters:" << std::endl;
+			std::cout << "\e[1;10mParameters:\e[0m" << std::endl;
 			std::cout << "\t--turn : Set the win turn." << std::endl;
 			std::cout << "\t--hand-size : Set the length of the hand for winning." << std::endl;
 			std::cout << "\t--total-mana : Set the amount of mana needed." << std::endl;
-			std::cout << "\t--has-cards : Set the cards needed in hand. (\",\" => AND, \"|\" => OR) " << std::endl;
+			std::cout << "\t--has-card : Set the cards needed in hand. (\",\" => AND, \"|\" => OR) " << std::endl;
 
 			exit(0);
 		}
+
 	}
 }
 
@@ -507,19 +628,23 @@ parseResult(Environment* env)
 	} else
 		result["OVERTURN"]++;
 
-	result["LIFE"] += env->counter["LIFE"] - 2;
+	result["LIFE"] += env->counter["LIFE"]; /*- 2;*/
 }
 
 void
 printResult1(Environment* env)
 {
-	double pTurn[6], pMulligan, pProtection[2], aLife;
+	double pTurn[7], pMulligan, pProtection[2], aLife;
 	int count = env->counter["TOTAL_TRY"];
 
 	for(int i = 0;i < 5;i++)
 		pTurn[i] = (double)(result["TURN" + std::to_string( i + 1 )])/(double)(count) * 100.0;
 
 	pTurn[5] = (double)(result["OVERTURN"])/(double)(count) * 100.0;
+	pTurn[6] = (double)0;
+
+	for(int i = 0;i < 5;i++)
+		pTurn[6] += pTurn[i];
 
 	pMulligan = (double)(result["MULLIGAN"])/(double)(result["TURN1"]) * 100.0;
 	pProtection[0] = (double)(result["TURN1_WITH_PROTECTION"])/(double)(count) * 100.0;
@@ -534,7 +659,7 @@ printResult1(Environment* env)
 	std::cout << "Probability of Turn 3 Win: " << result["TURN3"] << "/" << count << " ~ " << pTurn[2] << "%\n";
 	std::cout << "Probability of Turn 4 Win: " << result["TURN4"] << "/" << count << " ~ " << pTurn[3] << "%\n";
 	std::cout << "Probability of Turn 5 Win: " << result["TURN5"] << "/" << count << " ~ " << pTurn[4] << "%\n";
-	std::cout << "Probability of winning before Turn 5: " << (count - result["OVERTURN"]) << "/" << count << " ~ " << 100.0 - pTurn[5] << "%\n";	
+	std::cout << "Probability of winning before Turn 5: " << (result["TURN1"] + result["TURN2"] + result["TURN3"] + result["TURN4"] + result["TURN5"]) << "/" << count << " ~ " << pTurn[6] << "%\n";	
 	std::cout << "Probability of winning after Turn 5: " << result["OVERTURN"] << "/" << count << " ~ " << pTurn[5] << "%\n";	
 	std::cout << "Probability of winning On The Draw: " << result["TURN1"] + result["TURN2"] << "/" << count << " ~ " << pTurn[0] + pTurn[1] << "%\n";	
 	std::cout << "Average life after winning: " << result["LIFE"] << "/" << count << " ~ " << aLife << "%\n";

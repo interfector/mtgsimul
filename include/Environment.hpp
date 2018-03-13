@@ -162,7 +162,7 @@ class Environment
 
 		virtual void showZone(ZoneType sZone, std::string msg) {
 			std::cout << "\n===== " + msg + " ======\n";
-			for (auto &card : zone[sZone])
+			for (auto &card : old->zone[sZone])
 					std::cout << "-> " << card->name << "\n";
 			std::cout << "===================\n";
 		}
